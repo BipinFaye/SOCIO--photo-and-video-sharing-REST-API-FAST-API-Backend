@@ -11,6 +11,10 @@ load_dotenv()
 
 SECRET = os.getenv("JWT_SECRET")
 
+if not SECRET:
+    raise ValueError("JWT_SECRET environment variable is not set")
+
+
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
     reset_password_token_secret = SECRET
     verification_token_secret = SECRET

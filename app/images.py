@@ -4,8 +4,13 @@ import os
 
 load_dotenv()
 
-imagekit = ImageKit(
-    private_key=os.getenv("IMAGEKIT_PRIVATE_KEY")
-)
+IMAGEKIT_PRIVATE_KEY = os.getenv("IMAGEKIT_PRIVATE_KEY")
 
-IMAGEKIT_URL = os.getenv("IMAGEKIT_URL")
+if not IMAGEKIT_PRIVATE_KEY:
+    raise ValueError(
+        "IMAGEKIT_PRIVATE_KEY environment variable is not set"
+    )
+
+imagekit = ImageKit(
+    private_key=IMAGEKIT_PRIVATE_KEY
+)

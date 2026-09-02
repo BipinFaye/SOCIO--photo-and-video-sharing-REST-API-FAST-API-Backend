@@ -12,6 +12,18 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is not set")
+
+# Convert Railways Mysql URL into SQLAlchemy URL
+if DATABASE_URL.startswith("mysql://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "mysql://",
+        "mysql+aiomysql://",
+        1
+    )
+
+
 class Base(DeclarativeBase):
     pass
 
