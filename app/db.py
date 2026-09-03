@@ -7,6 +7,8 @@ from sqlalchemy.orm import DeclarativeBase, relationship
 from collections.abc import AsyncGenerator
 from datetime import datetime
 from dotenv import load_dotenv
+import ssl
+from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
 import os
 load_dotenv()
 
@@ -22,6 +24,8 @@ if DATABASE_URL.startswith("mysql://"):
         "mysql+aiomysql://",
         1
     )
+
+DATABASE_URL = DATABASE_URL.replace("?ssl-mode=REQUIRED", "")
 
 
 class Base(DeclarativeBase):
