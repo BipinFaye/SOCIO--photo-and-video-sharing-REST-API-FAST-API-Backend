@@ -112,6 +112,10 @@ class post(Base):
 # Create SSL context for Aiven MySQL
 ssl_context = ssl.create_default_context()
 
+# Aiven certificate verification workaround
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
+
 
 # Database engine
 Engine = create_async_engine(
