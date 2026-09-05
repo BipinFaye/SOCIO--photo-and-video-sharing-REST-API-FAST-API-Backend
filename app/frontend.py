@@ -6,6 +6,73 @@ import os
 
 st.set_page_config(page_title="SOCIO", layout="wide")
 
+# --- Minimal, classy color palette ---
+# Warm off-white background, one muted slate-navy accent, soft neutral borders.
+# No bright colors, no gradients - kept deliberately restrained.
+st.markdown("""
+<style>
+[data-testid="stApp"] {
+    background-color: #FAF9F5;
+}
+h1, h2, h3 {
+    color: #2B2B28 !important;
+    font-weight: 600;
+}
+p, label, span, div {
+    color: #2B2B28;
+}
+[data-testid="stSidebar"] {
+    background-color: #F1EEE6;
+    border-right: 1px solid #E3DFD3;
+}
+div.stButton > button[kind="primary"] {
+    background-color: #33475B;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+}
+div.stButton > button[kind="primary"]:hover {
+    background-color: #24313F;
+    color: #FFFFFF;
+}
+div.stButton > button[kind="secondary"] {
+    background-color: transparent;
+    color: #33475B;
+    border: 1px solid #33475B;
+    border-radius: 8px;
+    font-weight: 500;
+}
+div.stButton > button[kind="secondary"]:hover {
+    background-color: #EFEDE6;
+}
+input, textarea {
+    border-radius: 8px !important;
+    border: 1px solid #DAD5C8 !important;
+}
+[data-testid="stFileUploader"] {
+    border-radius: 8px;
+    border: 1px dashed #C9C3B3;
+    padding: 0.5rem;
+}
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border-radius: 12px !important;
+    border: 1px solid #E3DFD3 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+def get_initials(email: str) -> str:
+    """Turn an email into 1-2 letter initials for the avatar chip."""
+    name_part = email.split("@")[0]
+    pieces = [p for p in name_part.replace(".", "_").split("_") if p]
+    if not pieces:
+        return "?"
+    if len(pieces) == 1:
+        return pieces[0][:2].upper()
+    return (pieces[0][0] + pieces[1][0]).upper()
+
 # Backend URL: falls back to localhost for local dev, but can be overridden
 # via Streamlit secrets (st.secrets["API_URL"]) or the API_URL env var when
 # deployed, so this file doesn't need editing per-environment.
@@ -26,7 +93,8 @@ def get_headers():
 
 
 def login_page():
-    st.title("🚀 Welcome to SOCIO")
+    st.title("SOCIO")
+    st.markdown("<p style='color:#6B6B63;margin-top:-10px;'>Welcome back</p>", unsafe_allow_html=True)
 
     # Simple form with two buttons
     email = st.text_input("Email:")
@@ -71,7 +139,7 @@ def login_page():
 
 
 def upload_page():
-    st.title("📸 Share Something")
+    st.title("Share something")
 
     uploaded_file = st.file_uploader("Choose media", type=['png', 'jpg', 'jpeg', 'mp4', 'avi', 'mov', 'mkv', 'webm'])
     caption = st.text_area("Caption:", placeholder="What's on your mind?")
@@ -129,7 +197,7 @@ def create_transformed_url(original_url, transformation_params, caption=None):
 
 
 def feed_page():
-    st.title("🏠 Feed")
+    st.title("Feed")
 
     response = requests.get(f"{API_URL}/feed", headers=get_headers())
     if response.status_code == 200:
@@ -140,38 +208,44 @@ def feed_page():
             return
 
         for post in posts:
-            st.markdown("---")
+            with st.container(border=True):
+                col1, col2, col3 = st.columns([0.6, 4, 1])
+                with col1:
+                    initials = get_initials(post['email'])
+                    st.markdown(
+                        f"<div style='width:34px;height:34px;border-radius:50%;"
+                        f"background:#33475B;color:#FFFFFF;display:flex;"
+                        f"align-items:center;justify-content:center;font-size:13px;"
+                        f"font-weight:600;'>{initials}</div>",
+                        unsafe_allow_html=True,
+                    )
+                with col2:
+                    st.markdown(f"**{post['email']}**  \n"
+                                f"<span style='color:#6B6B63;font-size:13px;'>{post['created_at'][:10]}</span>",
+                                unsafe_allow_html=True)
+                with col3:
+                    if post.get('is_owner', False):
+                        if st.button("Delete", key=f"delete_{post['id']}", help="Delete post"):
+                            response = requests.delete(
+                                f"{API_URL}/delete/{post['id']}",
+                                headers=get_headers()
+                            )
+                            if response.status_code == 200:
+                                st.success("Post deleted!")
+                                st.rerun()
+                            else:
+                                st.error("Failed to delete post!")
 
-            # Header with user, date, and delete button (if owner)
-            col1, col2 = st.columns([4, 1])
-            with col1:
-                st.markdown(f"**{post['email']}** • {post['created_at'][:10]}")
-            with col2:
-                if post.get('is_owner', False):
-                    if st.button("🗑️", key=f"delete_{post['id']}", help="Delete post"):
-                        # Delete the post
-                        response = requests.delete(
-                            f"{API_URL}/delete/{post['id']}",
-                            headers=get_headers()
-                        )
-                        if response.status_code == 200:
-                            st.success("Post deleted!")
-                            st.rerun()
-                        else:
-                            st.error("Failed to delete post!")
-
-            # Uniform media display with caption overlay
-            caption = post.get('caption', '')
-            if post['file_type'] == 'image':
-                uniform_url = create_transformed_url(post['url'], "", caption)
-                st.image(uniform_url, width=300)
-            else:
-                # For videos: specify only height to maintain aspect ratio + caption overlay
-                uniform_video_url = create_transformed_url(post['url'], "w-400,h-200,cm-pad_resize,bg-blurred")
-                st.video(uniform_video_url, width=300)
-                st.caption(caption)
-
-            st.markdown("")  # Space between posts
+                # Uniform media display with caption overlay
+                caption = post.get('caption', '')
+                if post['file_type'] == 'image':
+                    uniform_url = create_transformed_url(post['url'], "", caption)
+                    st.image(uniform_url, width=300)
+                else:
+                    # For videos: specify only height to maintain aspect ratio + caption overlay
+                    uniform_video_url = create_transformed_url(post['url'], "w-400,h-200,cm-pad_resize,bg-blurred")
+                    st.video(uniform_video_url, width=300)
+                    st.caption(caption)
     else:
         st.error("Failed to load feed")
 
@@ -181,7 +255,7 @@ if st.session_state.user is None:
     login_page()
 else:
     # Sidebar navigation
-    st.sidebar.title(f"👋 Hi {st.session_state.user['email']}!")
+    st.sidebar.title(f"Hi, {st.session_state.user['email'].split('@')[0]}")
 
     if st.sidebar.button("Logout"):
         st.session_state.user = None
@@ -189,9 +263,9 @@ else:
         st.rerun()
 
     st.sidebar.markdown("---")
-    page = st.sidebar.radio("Navigate:", ["🏠 Feed", "📸 Upload"])
+    page = st.sidebar.radio("Navigate:", ["Feed", "Upload"])
 
-    if page == "🏠 Feed":
+    if page == "Feed":
         feed_page()
     else:
         upload_page()
